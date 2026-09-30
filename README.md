@@ -52,7 +52,11 @@ DendroGeo/
 
 ## Puesta en marcha
 
-### 1. Crear la base de datos en Supabase (15 minutos)
+### 1. Base de datos en Supabase
+
+> **Ya configurada:** proyecto `dendrogeo` (organización DendroGeo, plan gratuito) en `https://chukrzupbfsecgdshljw.supabase.co`, con el esquema instalado, confirmación de correo desactivada para que los técnicos entren de inmediato y la dirección del sitio apuntando a la app web. La conexión ya está escrita en `www/js/config.js`. Los pasos siguientes sirven solo para montar otra base de datos.
+
+
 
 1. Cree una cuenta y un proyecto en <https://supabase.com> (el plan gratuito alcanza para empezar).
 2. Abra **SQL Editor**, pegue todo `supabase/schema.sql` y pulse **Run**. Se puede volver a ejecutar sin perder datos.

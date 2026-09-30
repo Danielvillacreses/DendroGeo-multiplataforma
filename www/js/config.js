@@ -1,8 +1,8 @@
-// Configuración de la nube (Supabase).
-// Deje los valores vacíos para usar la app solo en el dispositivo (modo demostración),
-// o complételos con los datos de su proyecto: Supabase → Project Settings → API.
-// También se pueden ingresar desde la pantalla Ajustes de la app.
+// Configuración de la nube (Supabase) del proyecto DendroGeo.
+// La clave "anon" es pública por diseño: solo permite lo que autorizan las
+// políticas de seguridad (RLS) de supabase/schema.sql. Nunca ponga aquí la service_role.
+// Para usar otra base de datos, cambie estos valores o ingréselos en Ajustes de la app.
 export const CONFIG = {
-  SUPABASE_URL: '',        // ej. 'https://abcdefghijkl.supabase.co'
-  SUPABASE_ANON_KEY: '',   // clave pública "anon" (nunca la service_role)
+  SUPABASE_URL: 'https://chukrzupbfsecgdshljw.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNodWtyenVwYmZzZWNnZHNobGp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3OTkwNjAsImV4cCI6MjEwNjM3NTA2MH0.PeidvCWpFOw4z25zOKPGaQPkQqUuvuFk1qZxXqjlSg8',
 };
