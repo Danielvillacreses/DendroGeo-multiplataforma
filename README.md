@@ -8,6 +8,8 @@ Aplicación de campo y plataforma web para el **registro georreferenciado y el m
 | **iPhone / iPad** | App nativa por TestFlight / App Store, o la versión web instalada en la pantalla de inicio | `DendroGeo.ipa` |
 | **Navegador** (PC, Mac, tablet, celular) | Página web con modo sin conexión, instalable como app (PWA) | carpeta `www/` publicada con HTTPS |
 
+**Enlaces:** app web → <https://danielvillacreses.github.io/DendroGeo-multiplataforma/> · APK e iOS → pestaña [Actions](https://github.com/Danielvillacreses/DendroGeo-multiplataforma/actions) → última ejecución → *Artifacts*.
+
 Las tres versiones usan la misma base de datos en la nube: lo que un técnico registra en su Android aparece en el iPhone de otro y en la computadora de la oficina.
 
 | Función | Cómo lo resuelve |
