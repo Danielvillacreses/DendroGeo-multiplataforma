@@ -1,0 +1,178 @@
+# Compila DendroGeo para las tres plataformas cada vez que se sube código a "main"
+# o se crea una etiqueta de versión (v1.0.0, v1.1.0…). También se puede lanzar a mano
+# desde la pestaña Actions → "Compilar DendroGeo" → Run workflow.
+#
+#  web      → publica la app web en GitHub Pages (https://<usuario>.github.io/<repositorio>/)
+#  android  → APK de prueba (siempre) + APK y AAB firmados para Play Store (si hay llave)
+#  ios      → compila para simulador (siempre) + IPA firmado / TestFlight (si hay certificados)
+#
+# Los archivos quedan en Actions → (la ejecución) → Artifacts. Con etiqueta vX.Y.Z
+# además se crea una "Release" con el APK listo para descargar.
+
+name: Compilar DendroGeo
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: compilar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web (GitHub Pages)
+    runs-on: ubuntu-latest
+    continue-on-error: true   # si Pages no está activado, no detiene Android ni iOS
+    environment:
+      name: github-pages
+      url: ${{ steps.publicar.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: www
+      - id: publicar
+        uses: actions/deploy-pages@v4
+
+  android:
+    name: Android (APK)
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      DENDROGEO_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      DENDROGEO_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      DENDROGEO_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      DENDROGEO_VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npx cap sync android
+
+      - name: Preparar llave de firma
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/dendrogeo.jks"
+          echo "DENDROGEO_KEYSTORE=$RUNNER_TEMP/dendrogeo.jks" >> "$GITHUB_ENV"
+
+      - name: Compilar APK de prueba
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: Compilar APK y AAB firmados
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        working-directory: android
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Reunir archivos
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/DendroGeo-prueba.apk
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk dist/DendroGeo.apk
+            cp android/app/build/outputs/bundle/release/app-release.aab dist/DendroGeo-PlayStore.aab
+          fi
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DendroGeo-Android
+          path: dist/
+
+      - name: Publicar versión
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.apk
+
+  ios:
+    name: iOS
+    runs-on: macos-latest
+    env:
+      IOS_CERT_P12_BASE64: ${{ secrets.IOS_CERT_P12_BASE64 }}
+      IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+      IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+      IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+      IOS_EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD }}   # app-store-connect | ad-hoc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: npm ci
+      - run: npx cap sync ios
+
+      - name: Compilar para simulador (verifica el proyecto, sin firma)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          mkdir -p dist
+          cd build/Build/Products/Debug-iphonesimulator && zip -qr "$GITHUB_WORKSPACE/dist/DendroGeo-simulador.zip" App.app
+
+      - name: Instalar certificado y perfil
+        if: env.IOS_CERT_P12_BASE64 != ''
+        run: |
+          KC="$RUNNER_TEMP/firma.keychain-db"
+          security create-keychain -p "" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "" "$KC"
+          echo "$IOS_CERT_P12_BASE64" | base64 -d > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KC" -P "$IOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KC"
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          echo "$IOS_PROFILE_BASE64" | base64 -d > "$RUNNER_TEMP/perfil.mobileprovision"
+          security cms -D -i "$RUNNER_TEMP/perfil.mobileprovision" > "$RUNNER_TEMP/perfil.plist"
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" "$RUNNER_TEMP/perfil.plist")
+          NOMBRE=$(/usr/libexec/PlistBuddy -c "Print Name" "$RUNNER_TEMP/perfil.plist")
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RUNNER_TEMP/perfil.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
+          echo "PERFIL_NOMBRE=$NOMBRE" >> "$GITHUB_ENV"
+
+      - name: Generar IPA firmado
+        if: env.IOS_CERT_P12_BASE64 != ''
+        run: |
+          python3 scripts/firma-ios.py "$IOS_TEAM_ID" "$PERFIL_NOMBRE"
+          METODO="${IOS_EXPORT_METHOD:-ad-hoc}"
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/DendroGeo.xcarchive \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} archive
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>$METODO</string>
+            <key>teamID</key><string>$IOS_TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key><dict><key>ec.dendrogeo.app</key><string>$PERFIL_NOMBRE</string></dict>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/DendroGeo.xcarchive \
+            -exportOptionsPlist build/ExportOptions.plist -exportPath dist
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DendroGeo-iOS
+          path: dist/

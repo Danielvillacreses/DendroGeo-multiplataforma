@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DendroGeo</string>
+    <string name="title_activity_main">DendroGeo</string>
+    <string name="package_name">ec.dendrogeo.app</string>
+    <string name="custom_url_scheme">ec.dendrogeo.app</string>
+</resources>

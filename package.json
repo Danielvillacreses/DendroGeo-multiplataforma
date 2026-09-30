@@ -1,0 +1,26 @@
+{
+  "name": "dendrogeo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Registro georreferenciado y monitoreo histórico de árboles (web, Android e iOS)",
+  "scripts": {
+    "web": "npx http-server www -p 8080 -c-1",
+    "sync": "npx cap sync",
+    "android": "npx cap sync android && npx cap open android",
+    "ios": "npx cap sync ios && npx cap open ios",
+    "apk": "npx cap sync android && cd android && ./gradlew assembleDebug",
+    "iconos": "npx capacitor-assets generate --iconBackgroundColor '#1d6a48' --iconBackgroundColorDark '#0d1310' --splashBackgroundColor '#eff2ec' --splashBackgroundColorDark '#0d1310'"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/filesystem": "8.1.3",
+    "@capacitor/geolocation": "8.2.2",
+    "@capacitor/ios": "8.5.2",
+    "@capacitor/share": "8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.2"
+  }
+}
