@@ -2,7 +2,7 @@
 // - Archivos de la app: se guardan al instalar (precache) y se actualizan en segundo plano.
 // - Teselas de mapa ya vistas: se guardan para verlas sin conexión (hasta ~3000).
 // - Llamadas a Supabase: nunca se guardan; la sincronización la maneja la app.
-const VERSION = 'dendrogeo-v5';
+const VERSION = 'dendrogeo-v6';
 const APP = [
   './', 'index.html', 'manifest.webmanifest',
   'css/app.css', 'js/app.js', 'js/plataforma.js', 'js/cinta.js', 'js/tema.js', 'js/calc.js', 'js/store.js', 'js/sync.js', 'js/config.js', 'js/demo.js',
@@ -15,7 +15,8 @@ const TESELAS = 'dendrogeo-teselas';
 const MAX_TESELAS = 3000;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(APP)).then(() => self.skipWaiting()));
+  // cache: 'reload' evita copiar archivos viejos de la caché HTTP del navegador
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(APP.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -53,7 +54,7 @@ self.addEventListener('fetch', (e) => {
     // stale-while-revalidate: responde desde caché y actualiza en segundo plano
     e.respondWith(caches.open(VERSION).then(async (c) => {
       const hit = await c.match(req, { ignoreSearch: true });
-      const red = fetch(req).then((res) => { if (res.ok || res.type === 'opaque') c.put(req, res.clone()); return res; }).catch(() => null);
+      const red = fetch(url.origin === location.origin ? new Request(req, { cache: 'no-cache' }) : req).then((res) => { if (res.ok || res.type === 'opaque') c.put(req, res.clone()); return res; }).catch(() => null);
       if (hit) { e.waitUntil(red); return hit; }
       const res = await red;
       if (res) return res;
