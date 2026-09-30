@@ -2,7 +2,7 @@
 // - Archivos de la app: se guardan al instalar (precache) y se actualizan en segundo plano.
 // - Teselas de mapa ya vistas: se guardan para verlas sin conexión (hasta ~3000).
 // - Llamadas a Supabase: nunca se guardan; la sincronización la maneja la app.
-const VERSION = 'dendrogeo-v4';
+const VERSION = 'dendrogeo-v5';
 const APP = [
   './', 'index.html', 'manifest.webmanifest',
   'css/app.css', 'js/app.js', 'js/plataforma.js', 'js/cinta.js', 'js/tema.js', 'js/calc.js', 'js/store.js', 'js/sync.js', 'js/config.js', 'js/demo.js',

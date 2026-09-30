@@ -119,7 +119,13 @@ function pintarSync(e = sync.estado) {
   else if (e.pendientes) { s = 'pend'; t = `${e.pendientes} por subir`; }
   pill.dataset.s = s; txt.textContent = t;
   pill.title = e.error || (e.ultima ? 'Última sincronización: ' + new Date(e.ultima).toLocaleString('es-EC') : '');
-  if (vista === 'ajustes') { const box = $('#estado-sync'); if (box) box.innerHTML = htmlEstadoSync(); }
+  if (vista === 'ajustes') {
+    // si cambió la conexión o la cuenta, se redibuja Ajustes (muestra u oculta el ingreso)
+    const clave = `${e.configurado}|${e.usuario || ''}`;
+    const escribiendo = document.activeElement?.matches?.('#main input, #main textarea');
+    if (clave !== claveAjustes && !escribiendo) vAjustes();
+    else { const box = $('#estado-sync'); if (box) box.innerHTML = htmlEstadoSync(); }
+  }
 }
 sync.alEstado(pintarSync);
 
@@ -1267,7 +1273,9 @@ function htmlEstadoSync() {
   </div>${e.error ? `<div class="alerta bad small">${esc(e.error)}</div>` : ''}`;
 }
 
+let claveAjustes = '';
 function vAjustes() {
+  claveAjustes = `${sync.estado.configurado}|${sync.estado.usuario || ''}`;
   const cfg = sync.configActual();
   const e = sync.estado;
   const hayDemo = D.proyectos.some((p) => p._demo);
