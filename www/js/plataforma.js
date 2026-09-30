@@ -88,7 +88,22 @@ export async function entregarArchivo(nombre, texto, mime) {
 export async function registrarModoSinConexion() {
   if (NATIVA || !('serviceWorker' in navigator)) return;
   if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
-  try { await navigator.serviceWorker.register('sw.js'); } catch (e) { console.info('Service worker no disponible aquí:', e.message); }
+  // Cuando se publica una versión nueva, se recarga una sola vez para usarla de inmediato
+  // (si el usuario está escribiendo, se espera a que la app pase a segundo plano).
+  const habiaVersion = !!navigator.serviceWorker.controller;
+  let recargada = false;
+  const recargar = () => {
+    if (recargada) return;
+    if (document.activeElement?.matches?.('input, textarea, select') && !document.hidden) {
+      document.addEventListener('visibilitychange', recargar, { once: true }); return;
+    }
+    recargada = true; location.reload();
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (habiaVersion) recargar(); });
+  try {
+    const reg = await navigator.serviceWorker.register('sw.js');
+    reg.update().catch(() => {});
+  } catch (e) { console.info('Service worker no disponible aquí:', e.message); }
 }
 
 // Marca la plataforma en <html> para ajustes de estilo (p. ej. barra de estado en iOS)
