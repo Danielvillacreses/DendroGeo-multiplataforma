@@ -339,6 +339,17 @@ returns setof arboles language sql stable as $$
 $$;
 
 -- ---------------------------------------------------------------------
+-- Permisos de la API (la seguridad fina la dan las políticas RLS de arriba)
+-- ---------------------------------------------------------------------
+grant usage on schema public to anon, authenticated;
+grant select, insert, update on proyectos, parcelas, especies, arboles, mediciones, fotos to authenticated;
+grant select on miembros_proyecto to authenticated;
+grant select on v_arbol_actual, v_incrementos to authenticated;
+grant execute on function es_miembro(uuid), puede_editar(uuid), arboles_cerca(double precision, double precision, double precision),
+  invitar_miembro(uuid, text, rol_proyecto) to authenticated;
+revoke all on proyectos, parcelas, especies, arboles, mediciones, fotos, miembros_proyecto from anon;
+
+-- ---------------------------------------------------------------------
 -- Especies de referencia (costa ecuatoriana; densidades aproximadas,
 -- ajústelas con datos locales o la Global Wood Density Database)
 -- ---------------------------------------------------------------------
